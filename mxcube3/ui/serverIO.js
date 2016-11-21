@@ -15,7 +15,8 @@ import { setStatus,
          collapseTask,
          sendStopQueue,
          setCurrentSample } from './actions/queue';
-import { setLoading } from './actions/general';
+import { setLoading, addUserMessage } from './actions/general';
+
 
 class ServerIO {
 
@@ -61,6 +62,12 @@ class ServerIO {
 
     this.loggingSocket.on('log_record', (record) => {
       this.dispatch(addLogRecord(record));
+
+      if (record.logger === 'user_level_log') {
+        this.dispatch(addUserMessage(record, 'queue'));
+      } else {
+        this.dispatch(addUserMessage(record));
+      }
     });
 
     this.hwrSocket.on('Motors', (record) => {
@@ -144,4 +151,3 @@ class ServerIO {
 }
 
 export const serverIO = new ServerIO();
-

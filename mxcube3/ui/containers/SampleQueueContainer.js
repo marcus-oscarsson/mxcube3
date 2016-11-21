@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import CurrentTree from '../components/SampleQueue/CurrentTree';
@@ -10,6 +11,8 @@ import { showTaskForm } from '../actions/taskForm';
 import { DragDropContext as dragDropContext } from 'react-dnd';
 import HTML5Backend from 'react-dnd-html5-backend';
 import { Nav, NavItem } from 'react-bootstrap';
+import UserMessage from '../components/Notify/UserMessage';
+
 
 function mapStateToProps(state) {
   return {
@@ -27,7 +30,8 @@ function mapStateToProps(state) {
     mounted: state.queue.manualMount.set,
     rootPath: state.queue.rootPath,
     displayData: state.queue.displayData,
-    manualMount: state.queue.manualMount
+    manualMount: state.queue.manualMount,
+    userMessages: state.general.userMessages
   };
 }
 
@@ -36,7 +40,7 @@ function mapDispatchToProps(dispatch) {
   return {
     queueActions: bindActionCreators(QueueActions, dispatch),
     sampleViewActions: bindActionCreators(SampleViewActions, dispatch),
-    showForm: bindActionCreators(showTaskForm, dispatch)
+    showForm: bindActionCreators(showTaskForm, dispatch),
   };
 }
 
@@ -50,6 +54,7 @@ export default class SampleQueueContainer extends React.Component {
     this.handleSelect = this.handleSelect.bind(this);
     this.runQueue = this.runQueue.bind(this);
     this.runSample = this.runSample.bind(this);
+    this.userMessageOnly = this.userMessageOnly.bind(this);
   }
 
   handleSelect(selectedKey) {
@@ -63,6 +68,10 @@ export default class SampleQueueContainer extends React.Component {
   runSample(sampleID) {
     const queue = { sampleID: this.props.queue[sampleID] };
     this.props.queueActions.setQueueAndRun(queue, this.props.sampleOrder);
+  }
+
+  userMessageOnly(message) {
+    return message.meta.search('user_level_log') === -1;
   }
 
   render() {
@@ -104,7 +113,7 @@ export default class SampleQueueContainer extends React.Component {
                   stopQueue={sendStopQueue}
                 />
               <div className="queue-body">
-                <div className="m-tree">
+                <div ref="queueContainer" className="m-tree">
                   <Nav
                     bsStyle="tabs"
                     justified
@@ -148,6 +157,12 @@ export default class SampleQueueContainer extends React.Component {
                   />
                 </div>
             </div>
+        <UserMessage
+          messages={this.props.userMessages}
+          domTarget={() => ReactDOM.findDOMNode(this.refs.queueContainer)}
+          placement="left"
+          target="queue"
+        />
       </div>
     );
   }

@@ -1,103 +1,26 @@
 import fetch from 'isomorphic-fetch';
-import { setLoading, showErrorPanel } from './general';
-import { showTaskForm } from './taskForm';
+import { showErrorPanel } from './general';
 import { sendAbortCentring } from './sampleview';
+import { selectSamplesAction } from '../actions/sampleGrid';
 
-export function setSampleListAction(sampleList) {
-  return { type: 'SET_SAMPLE_LIST', sampleList };
-}
 
 export function queueLoading(loading) {
   return { type: 'QUEUE_LOADING', loading };
 }
 
-export function sendGetSampleList() {
-  return function (dispatch) {
-    dispatch(setLoading(true, 'Please wait', 'Retrieving sample changer contents', true));
-    fetch('mxcube/api/v0.1/sample_changer/samples_list', { credentials: 'include' })
-                        .then(response => response.json())
-                        .then(json => {
-                          dispatch(setLoading(false));
-                          dispatch(setSampleListAction(json));
-                        }, () => {
-                          dispatch(setLoading(false));
-                          dispatch(showErrorPanel(true, 'Could not get samples list'));
-                        });
-  };
-}
-
 
 export function clearAll() {
-  return {
-    type: 'CLEAR_ALL'
-  };
+  return { type: 'CLEAR_ALL' };
 }
 
 
-export function sendClearQueue() {
-  return function (dispatch) {
-    fetch('mxcube/api/v0.1/queue/clear', {
-      method: 'PUT',
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json',
-        'Content-type': 'application/json'
-      }
-    }).then((response) => {
-      if (response.status >= 400) {
-        throw new Error('Server refused to clear queue');
-      }
-    }).then(() => {
-      dispatch(clearAll());
-    });
-  };
+export function setQueueAction(queue) {
+  return { type: 'SET_QUEUE', queue };
 }
 
 
-export function setManualMountAction(manual) {
-  return { type: 'SET_MANUAL_MOUNT', manual };
-}
-
-
-export function sendManualMount(manual) {
-  return function (dispatch) {
-    return fetch('mxcube/api/v0.1/diffractometer/usesc', {
-      method: 'PUT',
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json',
-        'Content-type': 'application/json'
-      },
-      body: JSON.stringify({ use_sc: !manual })
-    }).then((response) => {
-      if (response.status >= 400) {
-        dispatch(showErrorPanel(true, 'Could not toggle manual mode'));
-      } else {
-        dispatch(sendClearQueue());
-        dispatch(setSampleListAction({}));
-        dispatch(setManualMountAction(manual));
-        if (manual) {
-          dispatch(showTaskForm('AddSample'));
-        }
-      }
-    });
-  };
-}
-
-
-export function setSamplesInfoAction(sampleInfoList) {
-  return { type: 'SET_SAMPLES_INFO', sampleInfoList };
-}
-
-
-export function sendSyncSamples(proposalId) {
-  return function (dispatch) {
-    fetch(`mxcube/api/v0.1/lims/samples/${proposalId}`, { credentials: 'include' })
-            .then(response => response.json())
-            .then(json => {
-              dispatch(setSamplesInfoAction(json.samples_info));
-            });
-  };
+export function addSamplesToQueueAction(samplesData) {
+  return { type: 'ADD_SAMPLES_TO_QUEUE', samplesData };
 }
 
 
@@ -114,6 +37,118 @@ export function sendAddQueueItem(items) {
 }
 
 
+export function setCurrentSample(sampleID) {
+  return {
+    type: 'SET_CURRENT_SAMPLE', sampleID
+  };
+}
+
+
+export function sendMountSample(sampleData) {
+  return function (dispatch) {
+    fetch('mxcube/api/v0.1/sample_changer/mount', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'Content-type': 'application/json'
+      },
+      body: JSON.stringify(sampleData)
+    }).then((response) => {
+      if (response.status >= 400) {
+        throw new Error('Server refused to mount sample');
+      } else {
+        dispatch(setCurrentSample(sampleData.sampleID));
+      }
+    });
+  };
+}
+
+
+export function addSamplesToQueue(sampleDataList) {
+  return function (dispatch) {
+    sendAddQueueItem(sampleDataList).then((response) => {
+      if (response.status >= 400) {
+        dispatch(showErrorPanel(true, 'Server refused to add sample'));
+      } else {
+        dispatch(addSamplesToQueueAction(sampleDataList));
+
+        const keys = sampleDataList.map(sampleData => sampleData.sampleID);
+        dispatch(selectSamplesAction(keys));
+      }
+    });
+  };
+}
+
+
+export function addSampleAndMount(sampleData) {
+  return function (dispatch) {
+    sendAddQueueItem([sampleData]).then((response) => {
+      if (response.status >= 400) {
+        dispatch(showErrorPanel(true, 'Server refused to add sample'));
+      } else {
+        dispatch(addSamplesToQueueAction([sampleData]));
+        dispatch(selectSamplesAction([sampleData.sampleID]));
+        dispatch(sendMountSample(sampleData));
+      }
+    });
+  };
+}
+
+
+export function sendClearQueue() {
+  return function (dispatch) {
+    fetch('mxcube/api/v0.1/queue/clear', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'Content-type': 'application/json'
+      }
+    }).then((response) => {
+      if (response.status >= 400) {
+        throw new Error('Server refused to clear queue');
+      } else {
+        dispatch(clearAll());
+      }
+    });
+  };
+}
+
+
+function sendSetQueue(queue) {
+  return fetch('mxcube/api/v0.1/queue', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-type': 'application/json'
+    },
+    body: JSON.stringify(queue)
+  });
+}
+
+
+export function setQueue(queueSamples, queueSamplesOrder) {
+  const queue = queueSamplesOrder.map(key => queueSamples[key]);
+
+  return function (dispatch) {
+    return sendSetQueue(queue).then(response => {
+      if (response.status >= 400) {
+        throw new Error('Server refused to set queue');
+      } else {
+        dispatch(setQueueAction(queue));
+      }
+    });
+  };
+}
+
+
+export function setSamplesInfoAction(sampleInfoList) {
+  return { type: 'SET_SAMPLES_INFO', sampleInfoList };
+}
+
+
 export function sendUpdateQueueItem(sid, tindex, data) {
   return fetch(`mxcube/api/v0.1/queue/${sid}/${tindex}`, {
     method: 'POST',
@@ -127,44 +162,26 @@ export function sendUpdateQueueItem(sid, tindex, data) {
 }
 
 
-export function sendDeleteQueueItem(sid, tindex) {
-  return fetch(`mxcube/api/v0.1/queue/${sid}/${tindex}`, {
-    method: 'DELETE',
+export function sendDeleteQueueItem(itemPosList) {
+  return fetch('mxcube/api/v0.1/queue/delete', {
+    method: 'POST',
     credentials: 'include',
     headers: {
       Accept: 'application/json',
       'Content-type': 'application/json'
-    }
+    },
+    body: JSON.stringify(itemPosList)
   });
-}
-
-
-export function setSampleOrderAction(newSampleOrder) {
-  return { type: 'SET_SAMPLE_ORDER', order: newSampleOrder };
-}
-
-
-export function addSampleAction(sampleData) {
-  return { type: 'ADD_SAMPLE', sampleData };
-}
-
-export function addSamplesAction(samplesData) {
-  return { type: 'ADD_SAMPLES', samplesData };
-}
-
-
-export function appendSampleListAction(sampleData) {
-  return { type: 'APPEND_TO_SAMPLE_LIST', sampleData };
-}
-
-
-export function removeSampleAction(sampleID) {
-  return { type: 'REMOVE_SAMPLE', sampleID };
 }
 
 
 export function setStatus(queueState) {
   return { type: 'SET_QUEUE_STATUS', queueState };
+}
+
+
+export function removeSamplesFromQueueAction(sampleIDList) {
+  return { type: 'REMOVE_SAMPLES_FROM_QUEUE', sampleIDList };
 }
 
 
@@ -226,6 +243,7 @@ export function sendMoveTask(sampleID, oldIndex, newIndex) {
   });
 }
 
+
 export function moveTask(sampleID, oldIndex, newIndex) {
   return function (dispatch) {
     dispatch(queueLoading(true));
@@ -239,30 +257,10 @@ export function moveTask(sampleID, oldIndex, newIndex) {
   };
 }
 
-// export function changeTaskOrder(sampleID, oldIndex, newIndex) {
-//   return function (dispatch) {
-//     dispatch(changeTaskOrderAction(sampleID, oldIndex, newIndex));
-
-//     sendChangeTaskOrder(sampleID, oldIndex, newIndex).then((response) => {
-//       if (response.status >= 400) {
-//         dispatch(changeTaskOrderAction(sampleID, newIndex, oldIndex));
-//         throw new Error('Could not change order');
-//       }
-//     });
-//   };
-// }
-
 
 export function runSample(queueID) {
   return {
     type: 'RUN_SAMPLE', queueID
-  };
-}
-
-
-export function setCurrentSample(sampleID) {
-  return {
-    type: 'SET_CURRENT_SAMPLE', sampleID
   };
 }
 
@@ -361,91 +359,6 @@ export function sendStopQueue() {
 }
 
 
-export function setQueueAction(queue) {
-  return { type: 'SET_QUEUE', queue };
-}
-
-
-export function sendSetQueue(queue, sampleOrder) {
-  const itemList = [];
-
-  for (const key of sampleOrder) {
-    itemList.push(queue[key]);
-  }
-
-  return fetch('mxcube/api/v0.1/queue', {
-    method: 'PUT',
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-      'Content-type': 'application/json'
-    },
-    body: JSON.stringify(itemList)
-  });
-}
-
-
-export function sendMountSample(sampleID) {
-  return function (dispatch) {
-    fetch(`mxcube/api/v0.1/sample_changer/${sampleID}/mount`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json',
-        'Content-type': 'application/json'
-      }
-    }).then((response) => {
-      if (response.status >= 400) {
-        throw new Error('Server refused to mount sample');
-      } else {
-        dispatch(setCurrentSample(sampleID));
-      }
-    });
-  };
-}
-
-export function addSamples(sampleData) {
-  return function (dispatch) {
-    sendAddQueueItem(sampleData);
-    dispatch(addSamplesAction(sampleData));
-  };
-}
-
-export function addSample(sampleData) {
-  return function (dispatch, getState) {
-    const data = { ...sampleData, checked: true, tasks: [] };
-    const { queue } = getState();
-    sendAddQueueItem([data]);
-    dispatch(addSampleAction(data));
-    if (queue.manualMount.set) {
-      dispatch(sendMountSample(data.sampleID));
-    }
-  };
-}
-
-
-export function appendSampleList(sampleData) {
-  return function (dispatch) {
-    dispatch(appendSampleListAction(sampleData));
-  };
-}
-
-
-export function deleteSample(sampleID) {
-  return function (dispatch) {
-    dispatch(queueLoading(true));
-    sendDeleteQueueItem(sampleID, undefined).then((response) => {
-      if (response.status >= 400) {
-        dispatch(showErrorPanel(true, 'Server refused to delete sample'));
-      } else {
-        dispatch(removeSampleAction(sampleID));
-      }
-      dispatch(queueLoading(false));
-    });
-  };
-}
-
-
 export function sendRunSample(sampleID, taskIndex) {
   return function (dispatch) {
     fetch(`mxcube/api/v0.1/queue/${sampleID}/${taskIndex}/execute`, {
@@ -466,24 +379,6 @@ export function sendRunSample(sampleID, taskIndex) {
 }
 
 
-export function setQueueAndRun(sampleID, taskIndex, queue) {
-  return function (dispatch) {
-    dispatch(sendSetQueue(queue)).then(() => {
-      dispatch(sendRunQueue());
-    });
-  };
-}
-
-
-export function setQueueAndRunTask(sampleID, taskIndex, queue) {
-  return function (dispatch) {
-    dispatch(sendSetQueue(queue)).then(() => {
-      dispatch(sendRunSample(sampleID, taskIndex));
-    });
-  };
-}
-
-
 export function removeTaskAction(sampleID, taskIndex) {
   return { type: 'REMOVE_TASK', sampleID, taskIndex };
 }
@@ -492,7 +387,7 @@ export function removeTaskAction(sampleID, taskIndex) {
 export function deleteTask(sampleID, taskIndex) {
   return function (dispatch) {
     dispatch(queueLoading(true));
-    sendDeleteQueueItem(sampleID, taskIndex).then((response) => {
+    sendDeleteQueueItem([[sampleID, taskIndex]]).then((response) => {
       if (response.status >= 400) {
         dispatch(showErrorPanel(true, 'Server refused to delete task'));
       } else {
@@ -511,71 +406,47 @@ export function addTaskAction(tasks) {
 
 export function addTask(sampleIDs, parameters, runNow) {
   return function (dispatch, getState) {
-    const tasks = sampleIDs.map((id) => (
-                  { type: parameters.type,
-                  label: parameters.label,
-                  sampleID: id,
-                  parameters,
-                  checked: true }
-                  ));
+    const state = getState();
+    const tasks = [];
+    const samples = [];
+
+    sampleIDs.forEach((sampleID) => {
+      const task = { type: parameters.type,
+                     label: parameters.label,
+                     sampleID,
+                     parameters,
+                     checked: true };
+
+      if (!state.queue.queue[sampleID]) {
+        const sample = state.sampleGrid.sampleList[sampleID];
+        sample.tasks = [task];
+        samples.push(sample);
+      } else {
+        tasks.push(task);
+      }
+    });
+
     dispatch(queueLoading(true));
-    const { queue } = getState();
-    const missingSamples = sampleIDs.filter((id) => !queue.queue[id]);  // the ones not in the queue
-    const samplesToAdd = missingSamples.map((sample) => (
-      {
-        type: 'Sample',
-        sampleID: sample,
-        sampleName: queue.sampleList[sample].sampleName,
-        location: queue.sampleList[sample].location,
-        proteinAcronym: '',
-        checked: true,
-        tasks: [] // TODO?:tasks.filter((tk) => tk.sampleID === sample)
-      }
-    ));
 
-    // const tasksClean = tasks.filter((tk) => (samplesToAdd.forEach((smp) => !smp.tasks[0] === tk)));
+    if (samples.length) {
+      dispatch(addSamplesToQueue(samples));
+    }
 
-    const allItems = samplesToAdd.concat(tasks);
-
-    sendAddQueueItem(allItems).then((response) => {
-      if (response.status >= 400) {
-        dispatch(showErrorPanel(true, 'The task could not be added to the server'));
-      } else {
-        dispatch(addSamplesAction(samplesToAdd));
-        dispatch(addTaskAction(tasks));
-        if (runNow) {
-          const taskIndex = queue.queue[sampleIDs][0].tasks.length;
-          dispatch(sendRunSample(sampleIDs, taskIndex));
+    if (tasks.length) {
+      sendAddQueueItem(tasks).then((response) => {
+        if (response.status >= 400) {
+          dispatch(showErrorPanel(true, 'The task could not be added to the server'));
+        } else {
+          dispatch(addTaskAction(tasks));
+          if (runNow) {
+            const taskIndex = state.queue.queue[sampleIDs[0]].tasks.length;
+            dispatch(sendRunSample(sampleIDs[0], taskIndex));
+          }
         }
-      }
-      dispatch(queueLoading(false));
-    });
-  };
-}
+      });
+    }
 
-
-export function addSampleAndTask(sampleID, parameters, sampleData, queue, runNow) {
-  return function (dispatch) {
-    const data = { ...sampleData,
-                   checked: true,
-                   tasks: [{ type: parameters.type,
-                             label: parameters.type.split(/(?=[A-Z])/).join(' '),
-                             sampleID,
-                             parameters,
-                             checked: true }] };
-
-    dispatch(addSampleAction(data));
-
-    sendAddQueueItem([data]).then((response) => {
-      if (response.status >= 400) {
-        dispatch(removeTaskAction(sampleID, 0));
-        throw new Error('The sample could not be added to the server');
-      } else {
-        if (runNow) {
-          dispatch(sendRunSample(sampleID, 0));
-        }
-      }
-    });
+    dispatch(queueLoading(false));
   };
 }
 
@@ -610,15 +481,16 @@ export function addTaskResultAction(sampleID, taskIndex, state, progress, limsRe
 }
 
 
-export function sendUnmountSample(queueID) {
+export function sendUnmountSample(sample) {
   return function (dispatch) {
-    fetch(`mxcube/api/v0.1/sample_changer/${queueID}/unmount`, {
-      method: 'PUT',
+    fetch('mxcube/api/v0.1/sample_changer/unmount', {
+      method: 'POST',
       credentials: 'include',
       headers: {
         Accept: 'application/json',
         'Content-type': 'application/json'
-      }
+      },
+      body: JSON.stringify(sample)
     }).then((response) => {
       if (response.status >= 400) {
         throw new Error('Server refused to unmount sample');
@@ -654,16 +526,24 @@ export function clearQueue() {
   return { type: 'CLEAR_QUEUE' };
 }
 
-export function setunNow(run, sampleID, taskIndex) {
-  return { type: 'SET_RUN_NOW', run, sampleID, taskIndex };
-}
 
-
-export function addSampleManualMount(sampleData) {
+export function deleteSamplesFromQueue(sampleIDList) {
   return function (dispatch) {
-    dispatch(clearQueue());
-    dispatch(appendSampleList(sampleData));
-    dispatch(addSample(sampleData));
-    dispatch(setCurrentSample(sampleData.sampleID));
+    dispatch(queueLoading(true));
+
+    const itemPostList = sampleIDList.map(sampleID => {
+      const itemPos = [sampleID, undefined];
+      return itemPos;
+    });
+
+    sendDeleteQueueItem(itemPostList).then((response) => {
+      if (response.status >= 400) {
+        dispatch(showErrorPanel(true, 'Server refused to delete sample'));
+      } else {
+        dispatch(removeSamplesFromQueueAction(sampleIDList));
+      }
+
+      dispatch(queueLoading(false));
+    });
   };
 }

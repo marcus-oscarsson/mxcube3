@@ -1,6 +1,4 @@
-#/usr/bin/python
-
-
+# -*- coding: utf-8 -*-
 class MOTOR_STATE:
     """
     Motor states, to be added to AbstractMotor definition when the web-
@@ -29,10 +27,34 @@ class INOUT_STATE:
     OUT = "out"
     UNDEFINED = "undefined"
 
-    VALUE_TO_STR = {0: IN,
-                    1: OUT,
-                    2: UNDEFINED}
+    TO_INOUT_STATE = {IN: IN,
+                      OUT: OUT}
 
-    STR_TO_VALUE = {IN: 0,
-                    OUT: 1,
+    STR_TO_VALUE = {OUT: 0,
+                    IN: 1,
                     UNDEFINED: 2}
+
+    STATE_TO_MSG_STR = {OUT: "OUT",
+                        IN: "IN"}
+
+
+class TANGO_SHUTTER_STATE:
+    """
+    State mapping for TangoShuter.TangoShutter
+    """
+    TO_INOUT_STATE = {"closed": INOUT_STATE.IN,
+                      "opened": INOUT_STATE.OUT}
+    
+    STATE_TO_MSG_STR = {INOUT_STATE.OUT: "OPEN",
+                        INOUT_STATE.IN: "CLOSED"}
+
+
+class MICRODIFF_INOUT_STATE:
+    """
+    State mapping for TangoShuter.TangoShutter
+    """
+    TO_INOUT_STATE = {"in": INOUT_STATE.OUT,
+                      "out": INOUT_STATE.IN}
+    
+    STATE_TO_MSG_STR = {INOUT_STATE.OUT: "OPEN",
+                        INOUT_STATE.IN: "CLOSED"}

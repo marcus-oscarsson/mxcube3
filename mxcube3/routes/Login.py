@@ -106,7 +106,6 @@ def loginInfo():
        409: Error, could not log in
     """
     global LOGGED_IN_USER
-
     login_info = session.get("loginInfo")
 
     if login_info is not None:
@@ -124,6 +123,7 @@ def loginInfo():
 
     login_info = login_info["loginRes"] if login_info is not None else {}
     login_info = limsutils.convert_to_dict(login_info)
+    limsutils.update_mxcube_session(login_info)
 
     return jsonify(
         { "synchrotron_name": mxcube.session.synchrotron_name,

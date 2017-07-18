@@ -337,14 +337,12 @@ def _handle_interleaved(sample_id, node):
 def _handle_sample(node):
     location = 'Manual' if node.free_pin_mode else node.loc_str
     enabled, state = get_node_state(node._node_id)
-
-    children = node.get_children()
-
     children_states = []
-    for child in children:
-        child = child.get_children()[0]  # assuming on task on each task group
-        child_enabled, child_state = get_node_state(child._node_id)
-        children_states.append(child_state)
+
+    for child in node.get_children():
+        for _c in child.get_children():
+            child_enabled, child_state = get_node_state(_c._node_id)
+            children_states.append(child_state)
 
     if RUNNING in children_states:
         state = RUNNING & SAMPLE_MOUNTED
@@ -991,44 +989,41 @@ def load_queue(session, redis=redis.Redis()):
         load_queue_from_dict(queue)
 
 
-def add_diffraction_plan(parent, child):
+def queue_model_child_added(parent, child):
     """
-    Listen to the addition of elements to the queue ('child_added')
-    and if it is a diff plan create the appropiate queue entry and
-    emit a socketio signal.
-    This is to overcome the fact that the Characterisation entry only
-    creates the model of the diff plan.
+    Listen to the addition of elements to the queue model ('child_added').
+    Add the corresponding entries to the queue if they are not already
+    added. Handels for instance the addition of referance collections for
+    characterisations and workflows.
     """
-    if isinstance(child, qmo.DataCollection):
-        parent_model, parent_entry = get_entry(parent._node_id)
+    parent_model, parent_entry = get_entry(parent._node_id)
+    model, entry = get_entry(child._node_id)
 
-        if 'Diffraction plan' in parent_model.get_name():
-            # name example string 'Diffraction plan - 3'
-            # Then we do know that we need to add the entry here, Create a
-            # new entry for the new child, in this case a data collection
+    # entry is none when a node is added from outside of MXCuBE3, i.e.,
+    # workflow or characterization.
+    if not entry:
+        if model.get_origin():
+            origin_model, origin_entry = get_entry(model.get_origin())
+
+            if isinstance(origin_model, qmo.Characterisation):
+                # Handle characterization specific logic here
+                print("CHARACTERIZATION")
+
+        # To handle results from characterization, make this elif
+        if isinstance(child, qmo.DataCollection):
             dc_entry = qe.DataCollectionQueueEntry(Mock(), child)
-            dcg_entry = qe.TaskGroupQueueEntry(Mock(), parent)
-
-            parent.set_enabled(True)
-            dcg_entry.set_enabled(True)
 
             child.set_enabled(True)
             dc_entry.set_enabled(True)
+            parent_entry.enqueue(dc_entry)
+            sample = parent.get_parent()
 
-            sample = parent.get_parent()  # mxcube.queue.get_model_root()
-            sample_model, sample_entry = get_entry(sample._node_id)
-            # TODO: check if the parent entry exits in case multiple diff plans
-            sample_entry.enqueue(dcg_entry)
-
-            # Add the entry to the newly created task group, brother to the
-            # characterisation
-            dcg_entry.enqueue(dc_entry)
-
-            msg = _handle_dc(sample._node_id, child)
-            msg['parameters']['typePrefix'] = 'P'
-            # TODO: add saved centring pos id, centred_position is removed in
-            # _handle_dc
-            socketio.emit('add_task', msg, namespace='/hwr')
+            task = _handle_dc(sample._node_id, child)
+            socketio.emit('add_task', {"tasks": [task]}, namespace='/hwr')
+        elif isinstance(child, qmo.TaskGroup):
+            dcg_entry = qe.TaskGroupQueueEntry(Mock(), child)
+            dcg_entry.set_enabled(True)
+            parent_entry.enqueue(dcg_entry)
 
 
 def execute_entry_with_id(sid, tindex=None):
@@ -1091,7 +1086,7 @@ def init_signals(queue):
     mxcube.collect.connect(mxcube.collect, 'collectOscillationFinished',
                            signals.collect_oscillation_finished)
 
-    queue.connect(queue, 'child_added', add_diffraction_plan)
+    queue.connect(queue, 'child_added', queue_model_child_added)
 
     queue.queue_hwobj.connect("queue_execute_started",
                               signals.queue_execution_started)

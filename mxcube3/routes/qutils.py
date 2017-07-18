@@ -33,6 +33,8 @@ RUNNING = 0x1
 UNCOLLECTED = 0x0
 READY = 0
 
+ORIGIN_MX3 = "MX3"
+
 
 def node_index(node):
     """
@@ -607,6 +609,7 @@ def add_sample(sample_id, item):
             raise Exception(msg)
 
     sample_model = qmo.Sample()
+    sample_model.set_origin(ORIGIN_MX3)
 
     # We should really use sample_id instead of loc_str
     sample_model.loc_str = sample_id
@@ -782,6 +785,7 @@ def _create_dc(task):
     :rtype: Tuple
     """
     dc_model = qmo.DataCollection()
+    dc_model.set_origin(ORIGIN_MX3)
     dc_entry = qe.DataCollectionQueueEntry(Mock(), dc_model)
 
     return dc_model, dc_entry
@@ -797,6 +801,7 @@ def _create_wf(task):
     :rtype: Tuple
     """
     dc_model = qmo.Workflow()
+    dc_model.set_origin(ORIGIN_MX3)
     dc_entry = qe.GenericWorkflowQueueEntry(Mock(), dc_model)
 
     return dc_model, dc_entry
@@ -821,6 +826,7 @@ def add_characterisation(node_id, task):
     char_params = qmo.CharacterisationParameters().set_from_dict(params)
 
     char_model = qmo.Characterisation(refdc_model, char_params)
+    char_model.set_origin(ORIGIN_MX3)
     char_entry = qe.CharacterisationGroupQueueEntry(Mock(), char_model)
     char_entry.queue_model_hwobj = mxcube.queue
     # Set the characterisation and reference collection parameters
@@ -830,6 +836,7 @@ def add_characterisation(node_id, task):
     # and its reference collection and one for the resulting diffraction plans.
     # But we only create a reference group if there is a result !
     refgroup_model = qmo.TaskGroup()
+    refgroup_model.set_origin(ORIGIN_MX3)
 
     mxcube.queue.add_child(sample_model, refgroup_model)
     mxcube.queue.add_child(refgroup_model, char_model)
@@ -867,7 +874,7 @@ def add_data_collection(node_id, task):
         raise Exception(msg)
 
     group_model = qmo.TaskGroup()
-
+    group_model.set_origin(ORIGIN_MX3)
     group_model.set_enabled(True)
     mxcube.queue.add_child(sample_model, group_model)
     mxcube.queue.add_child(group_model, dc_model)
@@ -902,7 +909,7 @@ def add_workflow(node_id, task):
         raise Exception(msg)
 
     group_model = qmo.TaskGroup()
-
+    group_model.set_origin(ORIGIN_MX3)
     group_model.set_enabled(True)
     mxcube.queue.add_child(sample_model, group_model)
     mxcube.queue.add_child(group_model, wf_model)
@@ -928,6 +935,7 @@ def add_interleaved(node_id, task):
     sample_model, sample_entry = get_entry(node_id)
 
     group_model = qmo.TaskGroup()
+    group_model.set_origin(ORIGIN_MX3)
     group_model.set_enabled(True)
     group_model.interleave_num_images = task['parameters']['swNumImages']
 
@@ -1004,9 +1012,11 @@ def queue_model_child_added(parent, child):
     parent_model, parent_entry = get_entry(parent._node_id)
     model, entry = get_entry(child._node_id)
 
-    # entry is none when a node is added from outside of MXCuBE3, i.e.,
-    # workflow or characterization.
-    if not entry:
+    # Origin is ORIGIN_MX3 if task comes from MXCuBE-3
+    if model.get_origin() != ORIGIN_MX3:
+
+        # If origin is set get the originating entry and model and
+        # handle accordingly
         if model.get_origin():
             origin_model, origin_entry = get_entry(model.get_origin())
 

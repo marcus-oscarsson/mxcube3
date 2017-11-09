@@ -264,11 +264,21 @@ class HOMediatorBase(object):
 
         return data
 
+
     @Utils.RateLimited(3)
     def value_change(self, *args, **kwargs):
         """
         Signal handler to be used for sending values to the client via 
-        socketIO, data should normally be sent in the "hwr" namespace.
+        socketIO.
+        """
+        data = {"name": self._name, "value": args[0]}
+        socketio.emit("beamline_value_change", data, namespace="/hwr")
+
+
+    def state_change(self, *args, **kwargs):
+        """
+        Signal handler to be used for sending the state to the client via 
+        socketIO
         """
         socketio.emit("beamline_value_change", self.dict_repr(), namespace="/hwr")
 
@@ -280,7 +290,8 @@ class EnergyHOMediator(HOMediatorBase):
     """
     def __init__(self, ho, name=''):
         super(EnergyHOMediator, self).__init__(ho, name)
-        ho.connect("energyChanged", self.value_change)
+        ho.connect("positionChanged", self.value_change)
+        ho.connect("stateChanged", self.state_change)
         self._precision = 4
 
     def set(self, value):
@@ -420,18 +431,18 @@ class DuoStateHOMediator(HOMediatorBase):
     def _connect_signals(self, ho):
         if isinstance(self._ho, MicrodiffInOut.MicrodiffInOut):
             self.STATES = MICRODIFF_INOUT_STATE
-            ho.connect("actuatorStateChanged", self.value_change)
+            ho.connect("actuatorStateChanged", self.state_change)
         elif isinstance(self._ho, TangoShutter.TangoShutter) or \
              isinstance(self._ho, ShutterMockup.ShutterMockup):
             self.STATES = TANGO_SHUTTER_STATE
-            ho.connect("shutterStateChanged", self.value_change)
+            ho.connect("shutterStateChanged", self.state_change)
         elif isinstance(self._ho, MicrodiffBeamstop.MicrodiffBeamstop):
             self.STATES = BEAMSTOP_STATE
-            ho.connect("positionReached", self.value_change)
-            ho.connect("noPosition", self.value_change)
+            ho.connect("positionReached", self.state_change)
+            ho.connect("noPosition", self.state_change)
         elif isinstance(self._ho, MicrodiffInOutMockup.MicrodiffInOutMockup):
             self.STATES = BEAMSTOP_STATE
-            ho.connect("actuatorStateChanged", self.value_change)
+            ho.connect("actuatorStateChanged", self.state_change)
 
     def _get_state(self):
         if isinstance(self._ho, MicrodiffInOut.MicrodiffInOut):
@@ -522,7 +533,7 @@ class DuoStateHOMediator(HOMediatorBase):
 class TransmissionHOMediator(HOMediatorBase):
     def __init__(self, ho, name=''):
         super(TransmissionHOMediator, self).__init__(ho, name)
-        ho.connect("attFactorChanged", self.value_change)
+        ho.connect("attFactorChanged", self.state_change)
         self._precision = 2
 
     def set(self, value):
@@ -554,6 +565,7 @@ class ResolutionHOMediator(HOMediatorBase):
     def __init__(self, ho, name=''):
         super(ResolutionHOMediator, self).__init__(ho, name)
         ho.connect("valueChanged", self.value_change)
+        ho.connect("stateChanged", self.state_change)
         self._precision = 3
 
     def set(self, value):
@@ -639,7 +651,7 @@ class DetectorDistanceHOMediator(HOMediatorBase):
     def __init__(self, ho, name=''):
         super(DetectorDistanceHOMediator, self).__init__(ho, name)
         ho.dtox.connect("positionChanged", self.value_change)
-        ho.dtox.connect("stateChanged", self.value_change)
+        ho.dtox.connect("stateChanged", self.state_change)
 
         self._precision = 3
 
@@ -678,7 +690,7 @@ class DetectorDistanceHOMediator(HOMediatorBase):
 class MachineInfoHOMediator(HOMediatorBase):
     def __init__(self, ho, name=''):
         super(MachineInfoHOMediator, self).__init__(ho, name)
-        ho.connect("valueChanged", self.value_change)
+        ho.connect("valueChanged", self.state_change)
         self._precision = 1
 
     def set(self, value):
@@ -734,7 +746,7 @@ class PhotonFluxHOMediator(HOMediatorBase):
         super(PhotonFluxHOMediator, self).__init__(ho, name)
 
         try:
-            ho.connect("valueChanged", self.value_change)
+            ho.connect("valueChanged", self.state_change)
         except:
             pass
 

@@ -36,6 +36,7 @@ export default class TaskItem extends Component {
       <div style={ { borderLeft: '1px solid #DDD',
                      borderRight: '1px solid #DDD',
                      borderBottom: '1px solid #DDD',
+                     marginRight: '1px',
                      padding: '0.5em' } }
       >
         <a href={link} target="_blank">Results</a>

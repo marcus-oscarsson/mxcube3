@@ -98,7 +98,7 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     root_logger.setLevel(logging.DEBUG)
     root_logger.addHandler(NullHandler())
     custom_log_handler = logging_handler.MX3LoggingHandler()
-    custom_log_handler.setLevel(logging.INFO)
+    custom_log_handler.setLevel(logging.DEBUG)
     custom_log_handler.setFormatter(log_formatter)
     exception_logger = logging.getLogger("exceptions")
     hwr_logger = logging.getLogger("HWR")

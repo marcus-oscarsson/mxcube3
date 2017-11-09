@@ -11,6 +11,7 @@ import ShutterMockup
 from numpy import arange
 from mxcube3 import socketio
 from mxcube3 import app as mxcube
+from mxcube3.routes import Utils
 
 from .statedefs import (MOTOR_STATE, INOUT_STATE, TANGO_SHUTTER_STATE,
                         MICRODIFF_INOUT_STATE, BEAMSTOP_STATE)
@@ -263,7 +264,8 @@ class HOMediatorBase(object):
 
         return data
 
-    def value_change(self, *args):
+    @Utils.RateLimited(3)
+    def value_change(self, *args, **kwargs):
         """
         Signal handler to be used for sending values to the client via 
         socketIO, data should normally be sent in the "hwr" namespace.

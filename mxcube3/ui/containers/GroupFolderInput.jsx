@@ -34,7 +34,7 @@ class GroupFolderInput extends React.Component {
   render() {
     return (
       <div>
-        <ControlLabel inline>Group path:</ControlLabel>
+        <ControlLabel>Group path:</ControlLabel>
         <Form inline>
           <FormGroup bsSize="small" validationState={this.state.validationState}>
             <FormControl

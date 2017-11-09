@@ -275,7 +275,7 @@ def get_queue_state():
     return res
 
 
-def _handle_dc(sample_id, node, include_lims_data=False):
+def _handle_dc(sample_id, node, include_lims_data=True):
     parameters = node.as_dict()
     parameters["shape"] = getattr(node, 'shape', '')
     parameters["helical"] = node.experiment_type == qme.EXPERIMENT_TYPE.HELICAL
@@ -299,14 +299,15 @@ def _handle_dc(sample_id, node, include_lims_data=False):
                                           parameters['fileName'])
 
     limsres = {}
+    lims_id = mxcube.NODE_ID_TO_LIMS_ID.get(node._node_id, 'null')
 
     # Only add data from lims if explicitly asked for, since
     # its a operation that can take some time.
     if include_lims_data and mxcube.rest_lims:
-        limsres = mxcube.rest_lims.get_dc(node.id)
+        limsres = mxcube.rest_lims.get_dc(lims_id)
 
     # Always add link to data, (no request made)
-    limsres["limsTaskLink"] = mxcube.rest_lims.dc_link(node.id)
+    limsres["limsTaskLink"] = mxcube.rest_lims.dc_link(lims_id)
 
     res = {"label": "Data Collection",
            "type": "DataCollection",
@@ -327,6 +328,25 @@ def _handle_wf(sample_id, node):
     enabled, state = get_node_state(queueID)
     parameters = node.parameters
     parameters.update(node.path_template.as_dict())
+
+    parameters['path'] = parameters['directory']
+
+    parameters['subdir'] = parameters['path'].\
+        split(mxcube.session.get_base_image_directory())[1][1:]
+
+    pt = node.path_template
+
+    parameters['fileName'] = pt.get_image_file_name().\
+        replace('%' + ('%sd' % str(pt.precision)), int(pt.precision) * '#')
+
+    parameters['fullPath'] = os.path.join(parameters['path'],
+                                          parameters['fileName'])
+
+    # Always add link to data, (no request made)
+    limsres = {}
+    lims_id = mxcube.NODE_ID_TO_LIMS_ID.get(queueID, 'null')
+    limsres["limsTaskLink"] = mxcube.rest_lims.dc_link(lims_id)
+
     res = {"label": parameters['label'],
            "type": "Workflow",
            "name": node._type,
@@ -335,7 +355,8 @@ def _handle_wf(sample_id, node):
            "taskIndex": node_index(node)['idx'],
            "queueID": queueID,
            "checked": node.is_enabled(),
-           "state": state
+           "state": state,
+           "limsResultData": limsres,
            }
 
     return res
@@ -417,6 +438,11 @@ def _handle_char(sample_id, node):
     queueID = node._node_id
     enabled, state = get_node_state(queueID)
 
+    # Always add link to data, (no request made)
+    limsres = {}
+    lims_id = mxcube.NODE_ID_TO_LIMS_ID.get(queueID, 'null')
+    limsres["limsTaskLink"] = mxcube.rest_lims.dc_link(lims_id)
+
     originID, task = _handle_diffraction_plan(node)
     res = {"label": "Characterisation",
            "type": "Characterisation",
@@ -426,6 +452,7 @@ def _handle_char(sample_id, node):
            "taskIndex": node_index(node)['idx'],
            "queueID": node._node_id,
            "state": state,
+           "limsResultData": limsres,
            "diffractionPlan": task,
            "diffractionPlanID": originID
            }
@@ -986,24 +1013,36 @@ def set_char_params(model, entry, task_data, sample_model):
     """
     params = task_data['parameters']
     set_dc_params(model.reference_image_collection, entry, task_data, sample_model)
-    model.characterisation_parameters.set_from_dict(params)
 
-    # Set default characterisation values taken from ednadefaults for
-    # those values that are no used in the UI.
-
+    # Set default characterisation values taken from ednadefaults xml file
     defaults = et.fromstring(mxcube.beamline.getObjectByRole("data_analysis").
                              edna_default_input)
-
-    model.characterisation_parameters.aimed_i_sigma = float(defaults.find(
-        ".diffractionPlan/aimedIOverSigmaAtHighestResolution/value").text)
 
     model.characterisation_parameters.aimed_completness = float(defaults.find(
         ".diffractionPlan/aimedCompleteness/value").text)
 
+    model.characterisation_parameters.aimed_i_sigma = float(defaults.find(
+        ".diffractionPlan/aimedIOverSigmaAtHighestResolution/value").text)
+
     model.characterisation_parameters.aimed_resolution = float(defaults.find(
         ".diffractionPlan/aimedResolution/value").text)
 
+    model.characterisation_parameters.complexity = str(defaults.find(
+        ".diffractionPlan/complexity/value").text)
+
+    model.characterisation_parameters.max_crystal_vdim = float(defaults.find(
+        "./sample/size/x/value").text)
+
+    model.characterisation_parameters.min_crystal_vdim = float(defaults.find(
+        ".sample/size/y/value").text)
+
+    model.characterisation_parameters.rad_suscept = float(defaults.find(
+            ".sample/susceptibility/value").text)
+    
+    model.characterisation_parameters.set_from_dict(params)
+
     # MXCuBE3 specific shape attribute
+    # TODO: Please consider defining shape attribute properly !
     model.shape = params["shape"]
 
     model.set_enabled(task_data['checked'])

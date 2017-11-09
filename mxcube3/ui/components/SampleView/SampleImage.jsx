@@ -352,7 +352,7 @@ export default class SampleImage extends React.Component {
         } else if (pointList.length > 2) {
           ctxMenuObj = { type: 'GROUP', id: pointList };
         } else if (gridList.length === 1) {
-          ctxMenuObj = { type: 'GridGroupSaved', gridData: gridList[0], id: gridList[0].id };
+          ctxMenuObj = { type: 'GridGroupSaved', gridData: gridList[0], id: gridList[0] };
         } else if (lineList.length !== 0) {
           ctxMenuObj = { type: 'LINE', id: lineList };
         }
@@ -369,7 +369,7 @@ export default class SampleImage extends React.Component {
             let gridData = this.props.grids[obj.id];
 
             if (gridData) {
-              ctxMenuObj = { type: 'GridGroupSaved', gridData, id: gridData.id };
+              ctxMenuObj = { type: 'GridGroupSaved', gridData, id: gridData };
             } else {
               gridData = this.drawGridPlugin.currentGridData();
               ctxMenuObj = { type: 'GridGroup', gridData, id: obj.id };

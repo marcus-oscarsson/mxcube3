@@ -76,7 +76,10 @@ export class TaskItem extends React.Component {
     let fImageUrl = '';
 
     const r = task.limsResultData;
+
     if (task.limsResultData && Object.keys(task.limsResultData).length > 0) {
+      const limsLink = r.limsTaskLink ? r.limsTaskLink : '';
+
       if (task.limsResultData.firstImageId) {
         fImageUrl = '/mxcube/api/v0.1/lims/dc/thumbnail/';
         fImageUrl += task.limsResultData.firstImageId.toString();
@@ -137,6 +140,8 @@ export class TaskItem extends React.Component {
               <img ref="limage" alt="Last" src={lImageUrl} />
             </span>
           </div>
+
+          <a href={limsLink} target="_blank">Details</a>
         </div>
       );
     }
@@ -214,6 +219,8 @@ export class TaskItem extends React.Component {
     return (
       <div key={this.props.taskIndex} className="sample-grid-task-item">
         <OverlayTrigger
+          trigger={['click']}
+          rootClose="true"
           ref="taskSummaryPopoverTrigger"
           placement={this.popoverPosition()}
           overlay={(

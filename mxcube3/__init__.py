@@ -115,7 +115,7 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     ### Importing all REST-routes
     from routes import (Main, Login, Beamline, Collection, Mockups, Utils,
                         SampleCentring, SampleChanger, Diffractometer, Queue,
-                        lims, qutils, workflow, Detector)
+                        lims, qutils, workflow, Detector, redirect)
 
     ### Install server-side UI state storage
     from mxcube3 import state_storage
@@ -151,7 +151,7 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         app.SAMPLE_TO_BE_MOUNTED = ''
         app.AUTO_MOUNT_SAMPLE = True
         app.AUTO_LOOP_CENTER = False
-        app.AUTO_ADD_DIFFPLAN = True
+        app.AUTO_ADD_DIFFPLAN = False
         app.CENTRING_METHOD = None
         app.NUM_SNAPSHOTS = 4
         app.NODE_ID_TO_LIMS_ID = {}

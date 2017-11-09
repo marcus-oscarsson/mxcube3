@@ -38,7 +38,7 @@ export default class TaskItem extends Component {
                      borderBottom: '1px solid #DDD',
                      padding: '0.5em' } }
       >
-        <a href={link}> ISPyB link</a>
+        <a href={link} target="_blank">Results</a>
       </div>
     );
   }
@@ -119,15 +119,15 @@ export default class TaskItem extends Component {
 
     return (
       <tr>
-        <td><a>{parameters.osc_start}</a></td>
-        <td><a>{parameters.osc_range}</a></td>
-        <td><a>{parameters.exp_time}</a></td>
+        <td><a>{parameters.osc_start.toFixed(2)}</a></td>
+        <td><a>{parameters.osc_range.toFixed(2)}</a></td>
+        <td><a>{parameters.exp_time.toFixed(2)}</a></td>
         <td><a>{parameters.num_images}</a></td>
-        <td><a>{parameters.transmission}</a></td>
-        <td><a>{parameters.resolution}</a></td>
-        <td><a>{parameters.energy}</a></td>
-        <td><a>{parameters.kappa_phi}</a></td>
-        <td><a>{parameters.kappa}</a></td>
+        <td><a>{parameters.transmission.toFixed(2)}</a></td>
+        <td><a>{parameters.resolution.toFixed(3)}</a></td>
+        <td><a>{parameters.energy.toFixed(4)}</a></td>
+        <td><a>{parameters.kappa_phi.toFixed(2)}</a></td>
+        <td><a>{parameters.kappa.toFixed(2)}</a></td>
       </tr>);
   }
 

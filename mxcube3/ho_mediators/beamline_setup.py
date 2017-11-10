@@ -264,8 +264,9 @@ class HOMediatorBase(object):
 
         return data
 
-
-    @Utils.RateLimited(3)
+    # Dont't limit rate this method with Utils.LimitRate, all sub-classes 
+    # will share this method thus all updates wont be sent if limit rated.
+    # Rather LimitRate the function calling this one.
     def value_change(self, *args, **kwargs):
         """
         Signal handler to be used for sending values to the client via 
@@ -273,7 +274,6 @@ class HOMediatorBase(object):
         """
         data = {"name": self._name, "value": args[0]}
         socketio.emit("beamline_value_change", data, namespace="/hwr")
-
 
     def state_change(self, *args, **kwargs):
         """
@@ -290,9 +290,13 @@ class EnergyHOMediator(HOMediatorBase):
     """
     def __init__(self, ho, name=''):
         super(EnergyHOMediator, self).__init__(ho, name)
-        ho.connect("positionChanged", self.value_change)
+        ho.connect("positionChanged", self._value_change)
         ho.connect("stateChanged", self.state_change)
         self._precision = 4
+
+    @Utils.RateLimited(6)
+    def _value_change(self, *args, **kwargs):
+        self.value_change(*args, **kwargs)
 
     def set(self, value):
         """
@@ -306,7 +310,7 @@ class EnergyHOMediator(HOMediatorBase):
         :rtype: float
         """
         try:
-            self._ho.start_move_energy(float(value))
+            self._ho.startMoveEnergy(float(value))
             res = self.get()
         except:
             raise
@@ -360,9 +364,15 @@ class WavelengthHOMediator(HOMediatorBase):
     """
     def __init__(self, ho, name=''):
         super(WavelengthHOMediator, self).__init__(ho, name)
-        ho.connect("energyChanged", self.value_change)
+        
+        ho.connect("energyChanged", self._value_change)
+        ho.energy_motor.connect("stateChanged", self.state_change)
+
         self._precision = 4
 
+    @Utils.RateLimited(6)
+    def _value_change(pos, wl):
+        self.value_change(wl)
 
     def set(self, value):
         """
@@ -376,7 +386,7 @@ class WavelengthHOMediator(HOMediatorBase):
         :rtype: float
         """
         try:
-            self._ho.start_move_energy(12.3984 / float(value))
+            self._ho.startMoveEnergy(12.3984 / float(value))
             res = self.get()
         except:
             raise
@@ -564,9 +574,13 @@ class TransmissionHOMediator(HOMediatorBase):
 class ResolutionHOMediator(HOMediatorBase):
     def __init__(self, ho, name=''):
         super(ResolutionHOMediator, self).__init__(ho, name)
-        ho.connect("valueChanged", self.value_change)
+        ho.connect("valueChanged", self._value_change)
         ho.connect("stateChanged", self.state_change)
         self._precision = 3
+
+    @Utils.RateLimited(6)
+    def _value_change(self, *args, **kwargs):
+        self.value_change(*args, **kwargs)
 
     def set(self, value):
         self._ho.move(round(float(value), 3))
@@ -649,11 +663,16 @@ class ResolutionHOMediator(HOMediatorBase):
 
 class DetectorDistanceHOMediator(HOMediatorBase):
     def __init__(self, ho, name=''):
-        super(DetectorDistanceHOMediator, self).__init__(ho, name)
-        ho.dtox.connect("positionChanged", self.value_change)
+        super(DetectorDistanceHOMediator, self).__init__(ho, name)        
+
+        ho.dtox.connect("positionChanged", self._value_change)
         ho.dtox.connect("stateChanged", self.state_change)
 
         self._precision = 3
+
+    @Utils.RateLimited(6)
+    def _value_change(self, *args, **kwargs):
+        self.value_change(*args, **kwargs)
 
     def set(self, value):
         self._ho.dtox.move(round(float(value), 3))

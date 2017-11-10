@@ -152,7 +152,7 @@
 
 
 .sc_location {
-    font-size: x-small;
+    font-size: 11px;
     float: right;
 }
 
@@ -235,4 +235,9 @@
   min-width: 700px !important;
   max-width: 700px !important; 
   padding-bottom: 1em;
+}
+
+
+.sample-grid-task-item {
+  float: left;
 }

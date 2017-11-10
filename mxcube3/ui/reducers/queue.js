@@ -5,7 +5,7 @@ const initialState = {
   queue: [],
   current: { sampleID: null, running: false },
   queueStatus: QUEUE_STOPPED,
-  autoMountNext: true,
+  autoMountNext: false,
   autoAddDiffPlan: false,
   centringMethod: CLICK_CENTRING,
   numSnapshots: 4,

@@ -122,9 +122,23 @@ def get_default_prefix(sample_data, generic_name):
     sample.code = sample_data.get("code", "")
     sample.name = sample_data.get("sampleName", "")
     sample.location = sample_data.get("location", "").split(':')
+    sample.lims_id = sample_data.get("limsID", -1)
     sample.crystals[0].protein_acronym = sample_data.get("proteinAcronym", "")
 
     return mxcube.session.get_default_prefix(sample, generic_name)
+
+def get_default_subdir(sample_data):
+    subdir = ""
+
+    sample_name = sample_data.get("sampleName", "")
+    protein_acronym = sample_data.get("proteinAcronym", "")
+
+    if protein_acronym:
+        subdir = "%s/%s-%s/" %(protein_acronym, protein_acronym, sample_name)
+    else:
+        subdir = "%s/" % sample_name
+
+    return subdir
 
 
 def convert_to_dict(ispyb_object):

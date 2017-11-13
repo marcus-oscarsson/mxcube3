@@ -156,6 +156,7 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         app.NUM_SNAPSHOTS = 4
         app.NODE_ID_TO_LIMS_ID = {}
         app.INITIAL_FILE_LIST = []
+        app.LIMS_SAMPLE_DATA = {}
 
         # set up streaming
         from mxcube3.video import streaming

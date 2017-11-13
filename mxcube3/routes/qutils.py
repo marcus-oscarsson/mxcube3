@@ -535,8 +535,14 @@ def _handle_sample(node):
                              'state': state,
                              'tasks': queue_to_dict_rec(node)}}
 
-    sample[node.loc_str]["defaultPrefix"] = limsutils.\
-        get_default_prefix(sample[node.loc_str], False)
+    if mxcube.LIMS_SAMPLE_DATA:
+        sample[node.loc_str].update(mxcube.LIMS_SAMPLE_DATA.get(node.loc_str, {}))
+
+#    sample[node.loc_str]["defaultPrefix"] = limsutils.\
+#        get_default_prefix(sample[node.loc_str], False)
+
+#    sample[node.loc_str]["defaultSubDir"] = limsutils.\
+#        get_default_subdir(sample[node.loc_str])
 
     return sample
 
@@ -1052,9 +1058,6 @@ def set_char_params(model, entry, task_data, sample_model):
     model.characterisation_parameters.aimed_resolution = float(defaults.find(
         ".diffractionPlan/aimedResolution/value").text)
 
-    model.characterisation_parameters.complexity = str(defaults.find(
-        ".diffractionPlan/complexity/value").text)
-
     model.characterisation_parameters.max_crystal_vdim = float(defaults.find(
         "./sample/size/x/value").text)
 
@@ -1064,6 +1067,11 @@ def set_char_params(model, entry, task_data, sample_model):
     model.characterisation_parameters.rad_suscept = float(defaults.find(
             ".sample/susceptibility/value").text)
     
+    try:
+        params["strategy_complexity"] = ["SINGLE", "FEW", "MANY"].index(params["strategy_complexity"])
+    except ValueError:
+         params["strategy_complexity"] = 0
+
     model.characterisation_parameters.set_from_dict(params)
 
     # MXCuBE3 specific shape attribute

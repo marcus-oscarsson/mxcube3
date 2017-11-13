@@ -5,7 +5,7 @@ import logging
 from flask import jsonify, Response, send_file, request
 from mxcube3 import app as mxcube
 from . import limsutils
-
+from . import qutils
 
 @mxcube.route("/mxcube/api/v0.1/lims/samples/<proposal_id>", methods=['GET'])
 def proposal_samples(proposal_id):
@@ -13,11 +13,13 @@ def proposal_samples(proposal_id):
     # 'db_connection.get_samples'
     lims_samples = mxcube.db_connection.get_samples(proposal_id, None)
     samples_info_list = [limsutils.convert_to_dict(x) for x in lims_samples]
-   
+    mxcube.LIMS_SAMPLE_DATA = {}
+
     for sample_info in samples_info_list:
         sample_info["limsID"] = sample_info.pop("sampleId")
         sample_info["limsLink"] = mxcube.rest_lims.sample_link()
         sample_info["defaultPrefix"] = limsutils.get_default_prefix(sample_info, False)
+        sample_info["defaultSubDir"] = limsutils.get_default_subdir(sample_info)
 
         try:
             basket = int(sample_info["containerSampleChangerLocation"])
@@ -28,7 +30,11 @@ def proposal_samples(proposal_id):
                 cell = int(round((basket+0.5)/3.0))
                 puck = basket-3*(cell-1)
                 sample_info["containerSampleChangerLocation"] = "%d:%d" % (cell, puck)
-
+            
+        lims_location = sample_info["containerSampleChangerLocation"] + ":%02d" % int(sample_info["sampleLocation"])
+        sample_info["location"] = lims_location
+        mxcube.LIMS_SAMPLE_DATA[lims_location] = sample_info
+       
     return jsonify({"samples_info": samples_info_list})
 
 

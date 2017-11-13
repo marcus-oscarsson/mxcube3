@@ -486,7 +486,15 @@ def get_default_char_acq_params():
             'take_dark_current': True,
             'skip_existing_images': False,
             'take_snapshots': True,
-            'fileNameTemplate': template
+            'fileNameTemplate': template,
+            'strategy_complexity': 'FEW',
+            'account_rad_damage': True,
+            'opt_sad': False,
+            'min_crystal_vdim': 0.05,
+            'max_crystal_vdim': 0.05,
+            'min_crystal_vphi': 0,
+            'max_crystal_vphi': 90,
+            
         },
         })
 

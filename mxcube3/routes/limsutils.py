@@ -11,7 +11,7 @@ from flask import session
 
 
 def init_sample_list():
-    mxcube.SAMPLE_LIST = {"sampleList": [], 'sampleOrder': []}
+    mxcube.SAMPLE_LIST = {"sampleList": {}, 'sampleOrder': []}
 
 
 def sample_list_set(sample_list):
@@ -41,7 +41,7 @@ def sample_list_sync_sample(lims_sample):
 
 def sample_list_update_sample(loc, sample):
     mxcube.SAMPLE_LIST["sampleList"].get(loc, {}).update(sample)
-    return mxcube.SAMPLE_LIST["sampleList"][loc]
+    return mxcube.SAMPLE_LIST["sampleList"].get(loc, {})
 
 
 def sc_contents_init():

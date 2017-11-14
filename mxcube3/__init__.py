@@ -156,7 +156,7 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         app.NODE_ID_TO_LIMS_ID = {}
         app.INITIAL_FILE_LIST = []
         app.SC_CONTENTS = {"FROM_CODE": {}, "FROM_LOCATION": {}}
-        app.SAMPLE_LIST = {}
+        app.SAMPLE_LIST = {"sampleList": {}, 'sampleOrder': []}
 
         # set up streaming
         from mxcube3.video import streaming

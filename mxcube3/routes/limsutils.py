@@ -9,6 +9,54 @@ import queue_model_objects_v1 as qmo
 from mxcube3 import app as mxcube
 from flask import session
 
+
+def init_sample_list():
+    mxcube.SAMPLE_LIST = {"sampleList": [], 'sampleOrder': []}
+
+
+def sample_list_set(sample_list):
+    mxcube.SAMPLE_LIST = sample_list
+
+
+def sample_list_get():
+    return mxcube.SAMPLE_LIST
+
+
+def sample_list_sync_sample(lims_sample):
+    lims_code = lims_sample.get("code", None)
+    lims_location = lims_sample.get("lims_location")
+    sample_to_update = None
+
+    # LIMS sample has code, check if the code was read by SC
+    if lims_code and mxcube.SC_CONTENTS["FROM_CODE"][lims_code]:
+        sample_to_update = mxcube.SC_CONTENTS["FROM_CODE"].get(lims_code, {})
+    elif lims_location:
+        # Asume that the samples have been put in the right place of the SC
+        sample_to_update = mxcube.SC_CONTENTS["FROM_LOCATION"].get(lims_location, {})
+
+    if sample_to_update:
+        loc = sample_to_update["sampleID"]
+        sample_list_update_sample(loc, lims_sample)
+        
+
+def sample_list_update_sample(loc, sample):
+    mxcube.SAMPLE_LIST["sampleList"].get(loc, {}).update(sample)
+    return mxcube.SAMPLE_LIST["sampleList"][loc]
+
+
+def sc_contents_init():
+    mxcube.SC_CONTENTS = {"FROM_CODE": {}, "FROM_LOCATION": {}}
+
+
+def sc_contents_add(sample):
+    code, location = sample.get("code", None), sample.get("sampleID")
+
+    if code:
+        mxcube.SC_CONTENTS.get("FROM_CODE")[code] = sample
+    else:
+        mxcube.SC_CONTENTS.get("FROM_LOCATION")[location] = sample  
+        
+
 def lims_login(loginID, password):
     """
     :param str loginID: Username

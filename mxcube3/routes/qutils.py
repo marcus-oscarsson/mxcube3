@@ -524,27 +524,21 @@ def _handle_sample(node):
     else:
         state = UNCOLLECTED
 
-    sample = {node.loc_str: {'sampleID': node.loc_str,
-                             'queueID': node._node_id,
-                             'code': node.code,
-                             'location': location,
-                             'sampleName': node.get_name(),
-                             'proteinAcronym': node.crystals[0].protein_acronym,
-                             'type': 'Sample',
-                             'checked': enabled,
-                             'state': state,
-                             'tasks': queue_to_dict_rec(node)}}
+    sample = {'sampleID': node.loc_str,
+              'queueID': node._node_id,
+              'code': node.code,
+              'location': location,
+              'sampleName': node.get_name(),
+              'proteinAcronym': node.crystals[0].protein_acronym,
+              'type': 'Sample',
+              'checked': enabled,
+              'state': state,
+              'tasks': queue_to_dict_rec(node)}
 
-    if mxcube.LIMS_SAMPLE_DATA:
-        sample[node.loc_str].update(mxcube.LIMS_SAMPLE_DATA.get(node.loc_str, {}))
+    
+    sample = limsutils.sample_list_update_sample(node.loc_str, sample)
 
-#    sample[node.loc_str]["defaultPrefix"] = limsutils.\
-#        get_default_prefix(sample[node.loc_str], False)
-
-#    sample[node.loc_str]["defaultSubDir"] = limsutils.\
-#        get_default_subdir(sample[node.loc_str])
-
-    return sample
+    return {node.loc_str: sample}
 
 
 def queue_to_dict_rec(node):

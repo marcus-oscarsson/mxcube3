@@ -32,10 +32,10 @@ def proposal_samples(proposal_id):
                 sample_info["containerSampleChangerLocation"] = "%d:%d" % (cell, puck)
             
         lims_location = sample_info["containerSampleChangerLocation"] + ":%02d" % int(sample_info["sampleLocation"])
-        sample_info["location"] = lims_location
-        mxcube.LIMS_SAMPLE_DATA[lims_location] = sample_info
+        sample_info["lims_location"] = lims_location
+        limsutils.sample_list_sync_sample(sample_info)
        
-    return jsonify({"samples_info": samples_info_list})
+    return jsonify(limsutils.sample_list_get())
 
 
 @mxcube.route("/mxcube/api/v0.1/lims/dc/thumbnail/<image_id>", methods=['GET'])

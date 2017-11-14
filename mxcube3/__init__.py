@@ -145,7 +145,6 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         app.actions = hwr.getHardwareObject(cmdline_options.beamline_actions)
         app.plotting = hwr.getHardwareObject(cmdline_options.plotting)
 
-
         # SampleID of currently mounted sample
         app.CURRENTLY_MOUNTED_SAMPLE = None
         app.SAMPLE_TO_BE_MOUNTED = ''
@@ -156,7 +155,8 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         app.NUM_SNAPSHOTS = 4
         app.NODE_ID_TO_LIMS_ID = {}
         app.INITIAL_FILE_LIST = []
-        app.LIMS_SAMPLE_DATA = {}
+        app.SC_CONTENTS = {"FROM_CODE": {}, "FROM_LOCATION": {}}
+        app.SAMPLE_LIST = {}
 
         # set up streaming
         from mxcube3.video import streaming

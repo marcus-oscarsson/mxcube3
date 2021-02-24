@@ -38,7 +38,7 @@
     "react-chat-widget": "^2.1.4",
     "react-clipboard.js": "^2.0.16",
     "react-contextmenu": "^2.3.0",
-    "react-dnd": "^3.0.2",
+    "react-dnd": "^13.1.0",
     "react-dnd-html5-backend": "^2.1.2",
     "react-dom": "^16.8.0",
     "react-draggable": "^4.2.0",
